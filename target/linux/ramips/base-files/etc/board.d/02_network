@@ -87,6 +87,7 @@ ramips_setup_interfaces()
 	sk-wb8|\
 	vr500|\
 	wf-2881|\
+	wl-wn575a3|\
 	whr-300hp2|\
 	whr-600d|\
 	witi|\
