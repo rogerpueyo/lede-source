@@ -6,6 +6,10 @@
 	compatible = "wavlink,wl-wn575a3", "mediatek,mt7628an-soc";
 	model = "Wavlink WL-WN575A3";
 
+	chosen {
+		bootargs = "console=ttyS0,57600";
+	};
+
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x4000000>;
@@ -17,6 +21,18 @@
 		gpio {
 			ralink,group = "i2c", "jtag";
 			ralink,function = "gpio";
+		};
+	};
+};
+
+&pcie {
+	status = "okay";
+	pcie-bridge {
+		mt76@0,0 {
+			reg = <0x0000 0 0 0 0>;
+			device_type = "pci";
+			mediatek,mtd-eeprom = <&factory 0x8000>;
+			mediatek,2ghz = <0>;
 		};
 	};
 };
