@@ -14,6 +14,7 @@
  *  - MikroTik RouterBOARD wAP2nD
  *  - MikroTik RouterBOARD cAP2nD
  *  - MikroTik RouterBOARD mAP2nD
+ *  - MikroTik RouterBOARD wAP AC
  *  Furthermore, the cAP lite (cAPL2nD) appears to feature the exact same
  *  hardware as the mAP L-2nD. It is unknown if they share the same board
  *  identifier.
@@ -536,7 +537,7 @@ void __init rbspi_wlan_init(u16 id, int wmac_offset)
 }
 
 #define RBSPI_MACH_BUFLEN	64
-/* 
+/*
  * Common platform init routine for all SPI NOR devices.
  */
 static int __init rbspi_platform_setup(void)
@@ -639,7 +640,7 @@ static void __init rbspi_network_setup(u32 flags, int gmac1_offset,
 		rbspi_wlan_init(1, wmac1_offset);
 }
 
-/* 
+/*
  * Init the mAP lite hardware (QCA953x).
  * The mAP L-2nD (mAP lite) has a single ethernet port, connected to PHY0.
  * Trying to use GMAC0 in direct mode was unsucessful, so we're
@@ -879,9 +880,27 @@ static void __init rbwap_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 1, 0);
+	rbspi_network_setup(flags, 0, 1, 2);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbwap_leds), rbwap_leds);
+}
+
+/*
+ * Init the wAP AC hardware (EXPERIMENTAL).
+ * The wAP AC has a single ethernet port.
+ */
+static void __init rbwapac_setup(void)
+{
+	u32 flags = RBSPI_HAS_WLAN0 | RBSPI_HAS_WLAN1 | RBSPI_HAS_PCI | RBSPI_HAS_WAN4 | RBSPI_HAS_MDIO1;
+
+	if (rbspi_platform_setup())
+		return;
+
+	rbspi_peripherals_setup(flags);
+
+	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
+	rbspi_network_setup(flags, 0, 1, 0);
+
 }
 
 /*
@@ -941,5 +960,6 @@ MIPS_MACHINE_NONAME(ATH79_MACH_RB_962, "962", rb962_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_750UPR2, "750-hb", rb750upr2_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_LHG5, "lhg", rblhg_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_WAP, "wap-hb", rbwap_setup);
+MIPS_MACHINE_NONAME(ATH79_MACH_RB_WAPAC, "wapg-sc", rbwapac_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_CAP, "cap-hb", rbcap_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_MAP, "map2-hb", rbmap_setup);
