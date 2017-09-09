@@ -27,6 +27,7 @@
  *  under the terms of the GNU General Public License version 2 as published
  *  by the Free Software Foundation.
  */
+ #include <linux/platform_data/phy-at803x.h>
 
 #include <linux/pci.h>
 #include <linux/platform_device.h>
@@ -885,22 +886,75 @@ static void __init rbwap_setup(void)
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbwap_leds), rbwap_leds);
 }
 
+static void __init om5p_ac_setup_qca955x_eth_cfg(u32 mask,
+						 unsigned int rxd,
+						 unsigned int rxdv,
+						 unsigned int txd,
+						 unsigned int txe)
+{
+	void __iomem *base;
+	u32 t;
+
+	base = ioremap(QCA955X_GMAC_BASE, QCA955X_GMAC_SIZE);
+
+	t = mask;
+	t |= rxd << QCA955X_ETH_CFG_RXD_DELAY_SHIFT;
+	t |= rxdv << QCA955X_ETH_CFG_RDV_DELAY_SHIFT;
+	t |= txd << QCA955X_ETH_CFG_TXD_DELAY_SHIFT;
+	t |= txe << QCA955X_ETH_CFG_TXE_DELAY_SHIFT;
+
+	__raw_writel(t, base + QCA955X_GMAC_REG_ETH_CFG);
+
+	iounmap(base);
+}
+
+static struct at803x_platform_data om5pac_at803x_data = {
+	.disable_smarteee = 1,
+	.enable_rgmii_rx_delay = 1,
+	.enable_rgmii_tx_delay = 1,
+};
+
+static struct mdio_board_info om5pac_mdio1_info[] = {
+	{
+		.bus_id = "ag71xx-mdi1.0",
+		.phy_addr = 1,
+		.platform_data = &om5pac_at803x_data,
+	},
+};
+
 /*
  * Init the wAP AC hardware (EXPERIMENTAL).
  * The wAP AC has a single ethernet port.
  */
 static void __init rbwapac_setup(void)
 {
-	u32 flags = RBSPI_HAS_WLAN0 | RBSPI_HAS_WLAN1 | RBSPI_HAS_PCI | RBSPI_HAS_WAN4 | RBSPI_HAS_MDIO1;
-
+u8 *art = (u8 *)KSEG1ADDR(0x1fff0000);
 	if (rbspi_platform_setup())
 		return;
 
-	rbspi_peripherals_setup(flags);
 
-	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 1, 0);
+	//u8 mac[6];
 
+	om5p_ac_setup_qca955x_eth_cfg(QCA955X_ETH_CFG_GE0_SGMII, 3, 3, 0, 0);
+	ath79_register_mdio(0, 0x0);
+
+	mdiobus_register_board_info(om5pac_mdio1_info,
+				    ARRAY_SIZE(om5pac_mdio1_info));
+
+	ath79_init_mac(ath79_eth0_data.mac_addr, art, 0x00);
+
+	/* GMAC1 is connected to MDIO1 in SGMII mode */
+	ath79_eth0_data.phy_if_mode = PHY_INTERFACE_MODE_SGMII;
+	ath79_eth0_data.mii_bus_dev = &ath79_mdio1_device.dev;
+	ath79_eth0_data.phy_mask = BIT(0);
+	ath79_eth0_pll_data.pll_1000 = 0x03000101;
+	ath79_eth0_pll_data.pll_100 = 0x80000101;
+	ath79_eth0_pll_data.pll_10 = 0x80001313;
+	ath79_eth0_data.speed = SPEED_1000;
+	ath79_eth0_data.duplex = DUPLEX_FULL;
+	ath79_register_eth(0);
+
+	ath79_register_pci();
 }
 
 /*
