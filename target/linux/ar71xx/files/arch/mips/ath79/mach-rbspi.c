@@ -886,27 +886,102 @@ static void __init rbwap_setup(void)
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbwap_leds), rbwap_leds);
 }
 
-static void __init om5p_ac_setup_qca955x_eth_cfg(u32 mask,
-						 unsigned int rxd,
-						 unsigned int rxdv,
-						 unsigned int txd,
-						 unsigned int txe)
-{
-	void __iomem *base;
-	u32 t;
+// static void __init om5p_ac_setup_qca955x_eth_cfg(u32 mask,
+// 						 unsigned int rxd,
+// 						 unsigned int rxdv,
+// 						 unsigned int txd,
+// 						 unsigned int txe)
+// {
+// 	void __iomem *base;
+// 	u32 t;
+//
+// 	base = ioremap(QCA955X_GMAC_BASE, QCA955X_GMAC_SIZE);
+//
+// 	t = mask;
+// 	t |= rxd << QCA955X_ETH_CFG_RXD_DELAY_SHIFT;
+// 	t |= rxdv << QCA955X_ETH_CFG_RDV_DELAY_SHIFT;
+// 	t |= txd << QCA955X_ETH_CFG_TXD_DELAY_SHIFT;
+// 	t |= txe << QCA955X_ETH_CFG_TXE_DELAY_SHIFT;
+//
+// 	__raw_writel(t, base + QCA955X_GMAC_REG_ETH_CFG);
+//
+// 	iounmap(base);
+// }
 
-	base = ioremap(QCA955X_GMAC_BASE, QCA955X_GMAC_SIZE);
+// static struct mdio_board_info om5pac_mdio_info[] = {
+// 	{
+// 		.bus_id = "ag71xx-mdio.1",
+// 		.phy_addr = 4,
+// 		.platform_data = &om5pac_at803x_data,
+// 	},
+// };
 
-	t = mask;
-	t |= rxd << QCA955X_ETH_CFG_RXD_DELAY_SHIFT;
-	t |= rxdv << QCA955X_ETH_CFG_RDV_DELAY_SHIFT;
-	t |= txd << QCA955X_ETH_CFG_TXD_DELAY_SHIFT;
-	t |= txe << QCA955X_ETH_CFG_TXE_DELAY_SHIFT;
 
-	__raw_writel(t, base + QCA955X_GMAC_REG_ETH_CFG);
 
-	iounmap(base);
-}
+// static void __init ap132_mdio_setup(void)
+// {
+// 	void __iomem *base;
+// 	u32 t;
+//
+// #define GPIO_IN_ENABLE3_ADDRESS                                      0x0050
+// #define GPIO_IN_ENABLE3_MII_GE1_MDI_MASK                             0x00ff0000
+// #define GPIO_IN_ENABLE3_MII_GE1_MDI_LSB                              16
+// #define GPIO_IN_ENABLE3_MII_GE1_MDI_SET(x)                           (((x) << GPIO_IN_ENABLE3_MII_GE1_MDI_LSB) & GPIO_IN_ENABLE3_MII_GE1_MDI_MASK)
+// #define GPIO_OUT_FUNCTION4_ADDRESS                                   0x003c
+// #define GPIO_OUT_FUNCTION4_ENABLE_GPIO_19_MASK                       0xff000000
+// #define GPIO_OUT_FUNCTION4_ENABLE_GPIO_19_LSB                        24
+// #define GPIO_OUT_FUNCTION4_ENABLE_GPIO_19_SET(x)                     (((x) << GPIO_OUT_FUNCTION4_ENABLE_GPIO_19_LSB) & GPIO_OUT_FUNCTION4_ENABLE_GPIO_19_MASK)
+// #define GPIO_OUT_FUNCTION4_ENABLE_GPIO_17_MASK                       0x0000ff00
+// #define GPIO_OUT_FUNCTION4_ENABLE_GPIO_17_LSB                        8
+// #define GPIO_OUT_FUNCTION4_ENABLE_GPIO_17_SET(x)                     (((x) << GPIO_OUT_FUNCTION4_ENABLE_GPIO_17_LSB) & GPIO_OUT_FUNCTION4_ENABLE_GPIO_17_MASK)
+//
+// 	base = ioremap(AR71XX_GPIO_BASE, AR71XX_GPIO_SIZE);
+//
+// 	t = __raw_readl(base + GPIO_IN_ENABLE3_ADDRESS);
+// 	t &= ~GPIO_IN_ENABLE3_MII_GE1_MDI_MASK;
+// 	t |= GPIO_IN_ENABLE3_MII_GE1_MDI_SET(19);
+// 	__raw_writel(t, base + GPIO_IN_ENABLE3_ADDRESS);
+//
+//
+// 	__raw_writel(__raw_readl(base + AR71XX_GPIO_REG_OE) & ~(1 << 19), base + AR71XX_GPIO_REG_OE);
+//
+// 	__raw_writel(__raw_readl(base + AR71XX_GPIO_REG_OE) & ~(1 << 17), base + AR71XX_GPIO_REG_OE);
+//
+//
+// 	t = __raw_readl(base + GPIO_OUT_FUNCTION4_ADDRESS);
+// 	t &= ~(GPIO_OUT_FUNCTION4_ENABLE_GPIO_19_MASK | GPIO_OUT_FUNCTION4_ENABLE_GPIO_17_MASK);
+// 	t |= GPIO_OUT_FUNCTION4_ENABLE_GPIO_19_SET(0x20) | GPIO_OUT_FUNCTION4_ENABLE_GPIO_17_SET(0x21);
+// 	__raw_writel(t, base + GPIO_OUT_FUNCTION4_ADDRESS);
+//
+// 	iounmap(base);
+//
+// }
+
+
+
+
+
+
+// static struct at803x_platform_data wapac_at803x_data = {
+// 	.disable_smarteee = 1,
+// 	.enable_rgmii_rx_delay = 1,
+// 	.enable_rgmii_tx_delay = 1,
+// };
+
+// static struct ar8327_pad_cfg ap132_ar8327_pad0_cfg;
+
+// static struct ar8327_platform_data ap132_ar8327_data = {
+// 	.pad0_cfg = &ap132_ar8327_pad0_cfg,
+// 	.port0_cfg = {
+// 		.force_link = 1,
+// 		.speed = AR8327_PORT_SPEED_1000,
+// 		.duplex = 1,
+// 		.txpause = 1,
+// 		.rxpause = 1,
+// 	},
+// };
+
+
 
 static struct at803x_platform_data om5pac_at803x_data = {
 	.disable_smarteee = 1,
@@ -914,13 +989,17 @@ static struct at803x_platform_data om5pac_at803x_data = {
 	.enable_rgmii_tx_delay = 1,
 };
 
-static struct mdio_board_info om5pac_mdio1_info[] = {
+
+static struct mdio_board_info wapac_mdio_info[] = {
 	{
-		.bus_id = "ag71xx-mdi1.0",
-		.phy_addr = 1,
+		.bus_id = "ag71xx-mdio.0",
+		.phy_addr = 0,
 		.platform_data = &om5pac_at803x_data,
 	},
 };
+
+
+
 
 /*
  * Init the wAP AC hardware (EXPERIMENTAL).
@@ -929,31 +1008,31 @@ static struct mdio_board_info om5pac_mdio1_info[] = {
 static void __init rbwapac_setup(void)
 {
 u8 *art = (u8 *)KSEG1ADDR(0x1fff0000);
-	if (rbspi_platform_setup())
+
+  if (rbspi_platform_setup())
 		return;
 
+    //ath79_register_m25p80();
 
-	//u8 mac[6];
 
-	om5p_ac_setup_qca955x_eth_cfg(QCA955X_ETH_CFG_GE0_SGMII, 3, 3, 0, 0);
-	ath79_register_mdio(0, 0x0);
+//    ap132_mdio_setup();
 
-	mdiobus_register_board_info(om5pac_mdio1_info,
-				    ARRAY_SIZE(om5pac_mdio1_info));
+    ath79_register_mdio(0, 0x0);
 
-	ath79_init_mac(ath79_eth0_data.mac_addr, art, 0x00);
+    ath79_init_mac(ath79_eth0_data.mac_addr, art, 0);
 
-	/* GMAC1 is connected to MDIO1 in SGMII mode */
-	ath79_eth0_data.phy_if_mode = PHY_INTERFACE_MODE_SGMII;
-	ath79_eth0_data.mii_bus_dev = &ath79_mdio1_device.dev;
-	ath79_eth0_data.phy_mask = BIT(0);
-	ath79_eth0_pll_data.pll_1000 = 0x03000101;
-	ath79_eth0_pll_data.pll_100 = 0x80000101;
-	ath79_eth0_pll_data.pll_10 = 0x80001313;
-	ath79_eth0_data.speed = SPEED_1000;
-	ath79_eth0_data.duplex = DUPLEX_FULL;
-	ath79_register_eth(0);
+    mdiobus_register_board_info(wapac_mdio_info,
+              ARRAY_SIZE(wapac_mdio_info));
 
+    /* GMAC1 is connected to the SGMII interface */
+    ath79_eth0_data.phy_if_mode = PHY_INTERFACE_MODE_SGMII;
+    ath79_eth0_data.speed = SPEED_1000; // Needed
+    ath79_eth0_data.duplex = DUPLEX_FULL; // Needed
+    ath79_eth0_data.phy_mask = 0x0; // !0 == not work
+    ath79_eth0_data.mii_bus_dev = &ath79_mdio0_device.dev;
+//    ath79_eth1_pll_data.pll_1000 = 0x03000101;
+
+    ath79_register_eth(0);
 	ath79_register_pci();
 }
 
