@@ -21,6 +21,7 @@
 +	    strstr(arcs_cmdline, "board=lhg") ||
 +	    strstr(arcs_cmdline, "board=map-hb") ||
 +	    strstr(arcs_cmdline, "board=map2-hb") ||
++	    strstr(arcs_cmdline, "board=omni-5fe") ||
 +	    strstr(arcs_cmdline, "board=wap-hb") ||
 +	    strstr(arcs_cmdline, "board=2011L") ||
 +	    strstr(arcs_cmdline, "board=2011r") ||
@@ -28,5 +29,5 @@
 +	    strstr(arcs_cmdline, "board=922gs"))
 +		ath79_prom_append_cmdline("console", "ttyS0,115200");
  }
- 
+
  void __init prom_free_prom_memory(void)
