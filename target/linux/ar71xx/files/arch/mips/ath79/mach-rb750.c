@@ -347,3 +347,13 @@ static void __init rb751g_setup(void)
 
 MIPS_MACHINE(ATH79_MACH_RB_751G, "751g", "MikroTik RouterBOARD 751G",
 	     rb751g_setup);
+
+static void __init omni_5fe_setup(void)
+{
+	rb750gr3_setup();
+	ath79_register_usb();
+	rb751_wlan_setup();
+}
+
+MIPS_MACHINE(ATH79_MACH_RB_O5FE, "omni-5fe", "Mikrotik RouterBOARD OmniTIK UPA-5HnD",
+	     omni_5fe_setup);
