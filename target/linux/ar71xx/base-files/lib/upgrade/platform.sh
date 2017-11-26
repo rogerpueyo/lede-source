@@ -707,7 +707,7 @@ platform_pre_upgrade() {
 	rb-911g-5hpnd|\
 	rb-912uag-2hpnd|\
 	rb-912uag-5hpnd|\
-	921gs-5hpacd-r2|\
+	rb-921gs-5hpacd-r2|\
 	rb-951g-2hnd|\
 	rb-951ui-2hnd|\
 	rb-2011il|\
