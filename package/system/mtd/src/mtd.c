@@ -146,7 +146,7 @@ int mtd_block_is_bad(int fd, int offset)
 {
 	int r = 0;
 	loff_t o = offset;
-
+	return r;
 	if (mtdtype == MTD_NANDFLASH)
 	{
 		r = ioctl(fd, MEMGETBADBLOCK, &o);
@@ -327,7 +327,11 @@ mtd_erase(const char *mtd)
 		 mtdEraseInfo.start += erasesize) {
 		if (mtd_block_is_bad(fd, mtdEraseInfo.start)) {
 			if (!quiet)
-				fprintf(stderr, "\nSkipping bad block at 0x%x   ", mtdEraseInfo.start);
+				fprintf(stderr, "\nFound a bad block at 0x%x   ", mtdEraseInfo.start);
+				fprintf(stderr, "\nActually trying to erase bad block at 0x%x   ", mtdEraseInfo.start);
+				ioctl(fd, MEMUNLOCK, &mtdEraseInfo);
+				if(ioctl(fd, MEMERASE, &mtdEraseInfo))
+					fprintf(stderr, "Tried to erase block, but failed, on %s at 0x%x\n", mtd, mtdEraseInfo.start);
 		} else {
 			ioctl(fd, MEMUNLOCK, &mtdEraseInfo);
 			if(ioctl(fd, MEMERASE, &mtdEraseInfo))
@@ -622,17 +626,17 @@ resume:
 				if (!quiet)
 					fprintf(stderr, "\b\b\b[e]");
 
-				if (mtd_block_is_bad(fd, e)) {
-					if (!quiet)
-						fprintf(stderr, "\nSkipping bad block at 0x%08zx   ", e);
-
-					skip_bad_blocks += erasesize;
-					e += erasesize;
-
-					// Move the file pointer along over the bad block.
-					lseek(fd, erasesize, SEEK_CUR);
-					continue;
-				}
+				// if (mtd_block_is_bad(fd, e)) {
+				// 	if (!quiet)
+				// 		fprintf(stderr, "\nSkipping bad block at 0x%08zx   ", e);
+				//
+				// 	skip_bad_blocks += erasesize;
+				// 	e += erasesize;
+				//
+				// 	// Move the file pointer along over the bad block.
+				// 	lseek(fd, erasesize, SEEK_CUR);
+				// 	continue;
+				// }
 
 				if (mtd_erase_block(fd, e) < 0) {
 					if (next) {
