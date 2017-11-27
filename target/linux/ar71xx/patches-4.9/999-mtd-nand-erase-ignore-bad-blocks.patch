@@ -1,0 +1,72 @@
+diff --git a/drivers/mtd/mtdcore.c b/drivers/mtd/mtdcore.c
+index d46e4ad..afb78ad 100644
+--- a/drivers/mtd/mtdcore.c
++++ b/drivers/mtd/mtdcore.c
+@@ -3,7 +3,7 @@
+  * drivers and users.
+  *
+  * Copyright © 1999-2010 David Woodhouse <dwmw2@infradead.org>
+- * Copyright © 2006      Red Hat UK Limited 
++ * Copyright © 2006      Red Hat UK Limited
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+@@ -958,8 +958,8 @@ int mtd_erase(struct mtd_info *mtd, struct erase_info *instr)
+ {
+ 	if (instr->addr >= mtd->size || instr->len > mtd->size - instr->addr)
+ 		return -EINVAL;
+-	if (!(mtd->flags & MTD_WRITEABLE))
+-		return -EROFS;
++	//if (!(mtd->flags & MTD_WRITEABLE))
++	//	return -EROFS;
+ 	instr->fail_addr = MTD_FAIL_ADDR_UNKNOWN;
+ 	if (!instr->len) {
+ 		instr->state = MTD_ERASE_DONE;
+diff --git a/drivers/mtd/nand/nand_base.c b/drivers/mtd/nand/nand_base.c
+index 31a6ee3..81947bd 100644
+--- a/drivers/mtd/nand/nand_base.c
++++ b/drivers/mtd/nand/nand_base.c
+@@ -3191,8 +3191,10 @@ int nand_erase_nand(struct mtd_info *mtd, struct erase_info *instr,
+ 					chip->page_shift, allowbbt)) {
+ 			pr_warn("%s: attempt to erase a bad block at page 0x%08x\n",
+ 				    __func__, page);
+-			instr->state = MTD_ERASE_FAILED;
+-			goto erase_exit;
++			pr_warn("%s: but, who cares, continuing... 0x%08x\n",
++				    __func__, page);
++			//instr->state = MTD_ERASE_FAILED;
++			//goto erase_exit;
+ 		}
+ 
+ 		/*
+diff --git a/drivers/mtd/nand/nand_bbt.c b/drivers/mtd/nand/nand_bbt.c
+index 7695efe..0bc8b9c 100644
+--- a/drivers/mtd/nand/nand_bbt.c
++++ b/drivers/mtd/nand/nand_bbt.c
+@@ -491,12 +491,14 @@ static int create_bbt(struct mtd_info *mtd, uint8_t *buf,
+ 		BUG_ON(bd->options & NAND_BBT_NO_OOB);
+ 
+ 		ret = scan_block_fast(mtd, bd, from, buf, numpages);
+-		if (ret < 0)
++		if (ret < 0){
++			pr_warn("Good eraseblock %d at 0x%012llx\n",
++				i, (unsigned long long)from);
+ 			return ret;
+-
++		}
+ 		if (ret) {
+ 			bbt_mark_entry(this, i, BBT_BLOCK_FACTORY_BAD);
+-			pr_warn("Bad eraseblock %d at 0x%012llx\n",
++			pr_warn("Oh! No! Bad eraseblock %d at 0x%012llx\n",
+ 				i, (unsigned long long)from);
+ 			mtd->ecc_stats.badblocks++;
+ 		}
+@@ -1422,7 +1424,7 @@ int nand_isbad_bbt(struct mtd_info *mtd, loff_t offs, int allowbbt)
+ 	case BBT_BLOCK_GOOD:
+ 		return 0;
+ 	case BBT_BLOCK_WORN:
+-		return 1;
++		return 0;
+ 	case BBT_BLOCK_RESERVED:
+ 		return allowbbt ? 0 : 1;
+ 	}

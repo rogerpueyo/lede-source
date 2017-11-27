@@ -530,6 +530,7 @@ platform_check_image() {
 	rb-2011uas-2hnd|\
 	rb-2011uias|\
 	rb-2011uias-2hnd|\
+	rb-omni-5fe|\
 	rb-sxt2n|\
 	rb-sxt5n)
 		nand_do_platform_check routerboard $1
@@ -716,6 +717,7 @@ platform_pre_upgrade() {
 	rb-2011uas-2hnd|\
 	rb-2011uias|\
 	rb-2011uias-2hnd|\
+	rb-omni-5fe|\
 	rb-sxt2n|\
 	rb-sxt5n|\
 	wi2a-ac200i|\
