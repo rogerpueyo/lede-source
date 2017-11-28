@@ -20,6 +20,7 @@ define Device/nand-large
   $(Device/mikrotik)
   DEVICE_TITLE := MikroTik RouterBoard (>= 128 MB NAND)
   KERNEL := kernel-bin | kernel2minor -s 2048 -e -c
+  SUPPORTED_DEVICES := rb-922uags-5hpacd
 endef
 TARGET_DEVICES += nand-64m nand-large
 
