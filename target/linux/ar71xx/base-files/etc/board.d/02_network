@@ -33,6 +33,7 @@ ar71xx_setup_interfaces()
 	r602n|\
 	rb-750|\
 	rb-751|\
+	rb-upa-5hnd|\
 	som9331|\
 	tew-632brp|\
 	tew-712br|\

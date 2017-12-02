@@ -530,7 +530,8 @@ platform_check_image() {
 	rb-2011uias|\
 	rb-2011uias-2hnd|\
 	rb-sxt2n|\
-	rb-sxt5n)
+	rb-sxt5n|\
+	rb-upa-5hnd)
 		nand_do_platform_check routerboard $1
 		return $?
 		;;
@@ -716,6 +717,7 @@ platform_pre_upgrade() {
 	rb-2011uias-2hnd|\
 	rb-sxt2n|\
 	rb-sxt5n|\
+	rb-upa-5hnd|\
 	wi2a-ac200i|\
 	wndr3700v4|\
 	wndr4300)
