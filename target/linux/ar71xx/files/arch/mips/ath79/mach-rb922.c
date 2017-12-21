@@ -276,7 +276,8 @@ static void __init rb922gs_setup(void)
 	ath79_eth0_data.mii_bus_dev = &ath79_mdio0_device.dev;
 	ath79_eth0_data.phy_if_mode = PHY_INTERFACE_MODE_RGMII;
 	ath79_eth0_data.phy_mask = BIT(RB922_PHY_ADDR);
-	if (strcmp(info->board_name, "921GS-5HPacD r2") == 0) {
+	if (strcmp(info->board_name, "921GS-5HPacD r2") == 0 ||
+		strcmp(info->board_name, "922UAGS-5HPacD") == 0) {
 		ath79_eth0_pll_data.pll_10 = 0xa0001313;
 		ath79_eth0_pll_data.pll_100 = 0xa0000101;
 		ath79_eth0_pll_data.pll_1000 = 0x8f000000;
@@ -290,6 +291,7 @@ static void __init rb922gs_setup(void)
 	ath79_register_eth(0);
 
 	ath79_register_pci();
+	ath79_register_usb();
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rb922gs_leds), rb922gs_leds);
 	ath79_register_gpio_keys_polled(-1, RB922_KEYS_POLL_INTERVAL,
 					ARRAY_SIZE(rb922gs_gpio_keys),
