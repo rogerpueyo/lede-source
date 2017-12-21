@@ -27,6 +27,7 @@ define Device/nand-large-ac
   DEVICE_TITLE := MikroTik RouterBoard (>= 128 MB NAND, 802.11ac)
   DEVICE_PACKAGES += kmod-ath10k ath10k-firmware-qca988x
   KERNEL := kernel-bin | kernel2minor -s 2048 -e -c
+  SUPPORTED_DEVICES := rb-921gs-5hpacd-r2
 endef
 TARGET_DEVICES += nand-64m nand-large nand-large-ac
 
