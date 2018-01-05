@@ -22,6 +22,7 @@
 +	    strstr(arcs_cmdline, "board=map-hb") ||
 +	    strstr(arcs_cmdline, "board=map2-hb") ||
 +	    strstr(arcs_cmdline, "board=wap-hb") ||
++	    strstr(arcs_cmdline, "board=wapg-sc") ||	
 +	    strstr(arcs_cmdline, "board=2011L") ||
 +	    strstr(arcs_cmdline, "board=2011r") ||
 +	    strstr(arcs_cmdline, "board=711Gr100") ||

@@ -19,6 +19,7 @@
  *  hardware as the mAP L-2nD. It is unknown if they share the same board
  *  identifier.
  *
+ *  Copyright (C) 2017 Giuseppe Tipaldi <ing.giuseppe.tipaldi@gmail.com>
  *  Copyright (C) 2017 Thibaut VARENE <varenet@parisc-linux.org>
  *  Copyright (C) 2016 David Hutchison <dhutchison@bluemesh.net>
  *  Copyright (C) 2017 Ryan Mounce <ryan@mounce.com.au>
@@ -41,6 +42,8 @@
 #include <linux/mtd/partitions.h>
 
 #include <linux/ar8216_platform.h>
+#include <linux/platform_data/phy-at803x.h>
+#include <linux/platform_data/mdio-gpio.h>
 
 #include <asm/prom.h>
 #include <asm/mach-ath79/ar71xx_regs.h>
@@ -69,6 +72,7 @@
 #define RBSPI_HAS_POE		BIT(5)
 #define RBSPI_HAS_MDIO1		BIT(6)
 #define RBSPI_HAS_PCI		BIT(7)
+#define RBSPI_HAS_TS		BIT(8) 	/* has an TC on SPI bus 0 */
 
 #define RB_ROUTERBOOT_OFFSET    0x0000
 #define RB_BIOS_SIZE            0x1000
@@ -135,6 +139,7 @@ static struct flash_platform_data rbspi_spi_flash_data = {
 };
 
 /* Several boards only have a single reset button wired to GPIO 16 */
+#define RBSPI_GPIO_BTN_RESET01	1
 #define RBSPI_GPIO_BTN_RESET16	16
 #define RBSPI_GPIO_BTN_RESET20	20
 
@@ -156,6 +161,17 @@ static struct gpio_keys_button rbspi_gpio_keys_reset20[] __initdata = {
 		.code = KEY_RESTART,
 		.debounce_interval = RBSPI_KEYS_DEBOUNCE_INTERVAL,
 		.gpio = RBSPI_GPIO_BTN_RESET20,
+		.active_low = 1,
+	},
+};
+
+static struct gpio_keys_button rbspi_gpio_keys_reset1[] __initdata = {
+	{
+		.desc = "Reset button",
+		.type = EV_KEY,
+		.code = KEY_RESTART,
+		.debounce_interval = RBSPI_KEYS_DEBOUNCE_INTERVAL,
+		.gpio = RBSPI_GPIO_BTN_RESET01,
 		.active_low = 1,
 	},
 };
@@ -503,10 +519,11 @@ static struct ath79_spi_platform_data rbspi_ath79_spi_data = {
 };
 
 /*
- * Global spi_board_info: devices that don't have an SSR only have the SPI NOR
- * flash on bus0 CS0, while devices that have an SSR add it on the same bus CS1
+ * Global hb_ssr spi_board_info for:  map-hb | 952-hb | wap-hb | cap-hb
+ *    - hb_ssr_spi_misc▸▸       : SPI SHIFT REGISTRER
+ *    - slow_large_spi_nor▸     : SPI NOR FLASH
  */
-static struct spi_board_info rbspi_spi_info[] = {
+static struct spi_board_info rbspi_hb_ssr_spi_info[] = {
 	{
 		.bus_num	= 0,
 		.chip_select	= 0,
@@ -519,6 +536,33 @@ static struct spi_board_info rbspi_spi_info[] = {
 		.max_speed_hz	= 25000000,
 		.modalias	= "74x164",
 		.platform_data	= &rbspi_ssr_data,
+	},
+};
+
+/*
+ * Global scorpionL spi_board_info for : wapg-sc | H951L | 750-hb
+ *    - slow_large_spi_nor▸     : SPI NOR FLASH
+ *    - rb2011_spi_ts ▸ ▸       : SPI TC ( ZT2046Q )
+ */
+static struct spi_board_info rbspi_scorpionL_spi_info[] = {
+	{
+		.bus_num	= 0,
+		.chip_select	= 0,
+		.max_speed_hz	= 25000000,
+		.modalias	= "m25p80",
+		.platform_data	= &rbspi_spi_flash_data,
+	},{
+		/*
+		 * IC: ZT2046Q
+		 * Set the modalias to spidev (gpl mikrotik uses rb2011-spi-ts)
+		 * for now. I don't know a driver yet.
+		 */
+		.bus_num	= 0,
+		.chip_select	= 2,
+		.max_speed_hz	= 2500 * 1000,
+		.mode		= SPI_MODE_3,
+		.modalias	= "spidev",
+		.platform_data  = (void *) 16,
 	}
 };
 
@@ -579,14 +623,26 @@ static void __init rbspi_peripherals_setup(u32 flags)
 {
 	unsigned spi_n;
 
-	if (flags & RBSPI_HAS_SSR)
-		spi_n = ARRAY_SIZE(rbspi_spi_info);
+	if (flags & RBSPI_HAS_SSR & RBSPI_HAS_TS )
+		spi_n = 3;
+	else if (flags & RBSPI_HAS_SSR )
+		spi_n = 2;
+	else if (flags & RBSPI_HAS_TS )
+		spi_n = 2;
 	else
 		spi_n = 1;     /* only one device on bus0 */
 
+	pr_info("Board have %d devices on spi0.\n",spi_n);
+
 	rbspi_ath79_spi_data.num_chipselect = spi_n;
 	rbspi_ath79_spi_data.cs_gpios = rbspi_spi_cs_gpios;
-	ath79_register_spi(&rbspi_ath79_spi_data, rbspi_spi_info, spi_n);
+
+	if (flags &  RBSPI_HAS_SSR )
+		ath79_register_spi(&rbspi_ath79_spi_data, rbspi_hb_ssr_spi_info, spi_n);
+	if (flags & RBSPI_HAS_TS )
+		ath79_register_spi(&rbspi_ath79_spi_data, rbspi_scorpionL_spi_info, spi_n);
+	else
+		ath79_register_spi(&rbspi_ath79_spi_data, rbspi_hb_ssr_spi_info, spi_n);
 
 	if (flags & RBSPI_HAS_USB)
 		ath79_register_usb();
@@ -599,8 +655,7 @@ static void __init rbspi_peripherals_setup(u32 flags)
  * Common network init routine for all SPI NOR devices.
  * Sets LAN/WAN/WLAN.
  */
-static void __init rbspi_network_setup(u32 flags, int gmac1_offset,
-					int wmac0_offset, int wmac1_offset)
+static void __init rbspi_network_setup(u32 flags, int gmac1_offset)
 {
 	/* for QCA953x that will init mdio1_device/data */
 	ath79_register_mdio(0, 0x0);
@@ -634,11 +689,22 @@ static void __init rbspi_network_setup(u32 flags, int gmac1_offset,
 	ath79_eth1_data.phy_if_mode = PHY_INTERFACE_MODE_GMII;
 	ath79_register_eth(1);
 
+}
+
+/*
+ * Common WiFi init routine for all SPI NOR devices.
+ * Sets WiFi
+ */
+static void __init rbspi_wifi_registrer(u32 flags,
+				int wmac0_offset, int wmac1_offset)
+{
+
 	if (flags & RBSPI_HAS_WLAN0)
 		rbspi_wlan_init(0, wmac0_offset);
 
 	if (flags & RBSPI_HAS_WLAN1)
 		rbspi_wlan_init(1, wmac1_offset);
+
 }
 
 /* 
@@ -658,7 +724,10 @@ static void __init rbmapl_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 1, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_wifi_registrer(flags, 1, 0);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbmapl_leds), rbmapl_leds);
 
@@ -689,7 +758,10 @@ static void __init rbhapl_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 4 */
-	rbspi_network_setup(flags, 0, 4, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_wifi_registrer(flags, 4, 0);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbhapl_leds), rbhapl_leds);
 
@@ -713,7 +785,10 @@ static void __init rbspi_952_750r2_setup(u32 flags)
 	 * GMAC1 is HW MAC + 1, WLAN0 MAC IS HW MAC + 5 (hAP),
 	 * WLAN1 MAC IS HW MAC + 6 (hAP ac lite)
 	 */
-	rbspi_network_setup(flags, 1, 5, 6);
+	rbspi_network_setup(flags, 1);
+
+	/*Radios*/
+	rbspi_wifi_registrer(flags, 5, 6);
 
 	if (flags & RBSPI_HAS_USB)
 		gpio_request_one(RB952_GPIO_USB_POWER,
@@ -800,7 +875,8 @@ static void __init rb750upr2_setup(void)
  */
 static void __init rb962_setup(void)
 {
-	u32 flags = RBSPI_HAS_USB | RBSPI_HAS_POE | RBSPI_HAS_PCI;
+	u32 flags = RBSPI_HAS_USB | RBSPI_HAS_POE
+		| RBSPI_HAS_PCI | RBSPI_HAS_WLAN1;
 
 	if (rbspi_platform_setup())
 		return;
@@ -825,7 +901,8 @@ static void __init rb962_setup(void)
 	ath79_register_eth(0);
 
 	/* WLAN1 MAC is HW MAC + 7 */
-	rbspi_wlan_init(1, 7);
+	rbspi_wifi_registrer(flags, 1, 7);
+
 
 	if (flags & RBSPI_HAS_USB)
 		gpio_request_one(RB962_GPIO_USB_POWER,
@@ -863,7 +940,10 @@ static void __init rblhg_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN1 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 0, 1);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_wifi_registrer(flags, 0, 1);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rblhg_leds), rblhg_leds);
 
@@ -886,7 +966,10 @@ static void __init rbwap_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 1, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_wifi_registrer(flags, 1, 0);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbwap_leds), rbwap_leds);
 
@@ -910,7 +993,10 @@ static void __init rbcap_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 1, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_wifi_registrer(flags, 1, 0);
 
 	gpio_request_one(RBCAP_GPIO_LED_ALL,
 			 GPIOF_OUT_INIT_HIGH | GPIOF_EXPORT_DIR_FIXED,
@@ -936,7 +1022,10 @@ static void __init rbmap_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 2 */
-	rbspi_network_setup(flags, 0, 2, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_wifi_registrer(flags, 2, 0);
 
 	if (flags & RBSPI_HAS_POE)
 		gpio_request_one(RBMAP_GPIO_POE_POWER,
@@ -958,7 +1047,123 @@ static void __init rbmap_setup(void)
 					rbspi_gpio_keys_reset16);
 }
 
+/*
+ * RBwAPG-5HacT2HnD board:
+ *  -Power	: PoE AT - DC.in (12 - 57V)
+ *  -SoC	: QCA9556
+ *  -Net:	: AR8033
+ *  -Phy0	: Built-in SoC, mimo 2x2:2
+ *  -Phy1	: QCA9880 3x3
+ *  -RAM	: 64 MiB
+ *  -FLASH	: 16 MiB
+ *  -Antennas	: Gain 2dbi ( both bands )
+ *  -IC		: ZT2046Q provide a temperature and voltage sensor.
+ *
+ *  Magic: wapg-sc
+ */
 
+#define RBWAPG_LED1		1
+#define RBWAPG_LED2		8
+#define RBWAPG_LED3		9
+
+#define RBWAPG_POWERLED		16
+/*
+ * PLED(power_led, 16, GPIO, PLED_CFG_ON | PLED_CFG_INV),
+ *  \
+ *   `>#define PLED(name,bit,type,cfg)▸PLEDN(PLED_NAME_##name, bit, type, cfg)
+ *    |
+ *    = PLEDN( PLED_NAME_power_led, 16, 0, PLED_CFG_ON | PLED_CFG_INV )
+ *     |
+ *     |
+ *     = (( (PLED_TYPE_##type) & 0xff) |
+▸       ▸        (((bit) & 0xff) << 8) |
+▸       ▸      (((nidx) & 0xff) << 16) |
+▸       ▸       ▸    (cfg) | PLED_VALID)
+
+ *
+ * #define PLDI(name,bit,type)▸    PLED(name, bit, type, PLED_CFG_INV)
+ *
+ * */
+
+#define RBWAPG_GPIO_MDIO_MDC		12
+#define RBWAPG_GPIO_MDIO_DATA		11
+
+#define RBWAPG_MDIO_PHYMASK		0
+
+static struct gpio_led rbwapg_leds[] __initdata = {
+	{
+		.name = "rb:green:led1",
+		.gpio = RBWAPG_LED1,
+		.active_low = 1,
+	},{
+		.name = "rb:blue:power",
+		.gpio = RBWAPG_POWERLED,
+		.active_low = 1,
+	},
+};
+
+static struct mdio_gpio_platform_data rbwapg_mdio_data = {
+	.mdc		= RBWAPG_GPIO_MDIO_MDC,
+	.mdio		= RBWAPG_GPIO_MDIO_DATA,
+	.phy_mask	= ~BIT(RBWAPG_MDIO_PHYMASK),
+};
+
+static struct platform_device rbwapg_phy_device = {
+	.name	= "mdio-gpio",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &rbwapg_mdio_data
+	},
+};
+
+static void __init rbwapg_setup(void)
+{
+	u32 flags = RBSPI_HAS_WLAN1 | RBSPI_HAS_PCI
+		| RBSPI_HAS_TS;
+
+	if (rbspi_platform_setup())
+		return;
+
+	/* Sets SPI and USB */
+	rbspi_peripherals_setup(flags);
+
+	/* SoC setup: MDIO Interface  */
+	platform_device_register(&rbwapg_phy_device);
+
+	/* GMAC1 is connect by SGMII to AR8083  */
+	ath79_init_mac(ath79_eth1_data.mac_addr, ath79_mac_base, 0);
+	ath79_eth1_data.mii_bus_dev = &rbwapg_phy_device.dev;
+	ath79_eth1_data.phy_if_mode = PHY_INTERFACE_MODE_SGMII;
+	ath79_eth1_data.phy_mask = BIT(RBWAPG_MDIO_PHYMASK);
+	ath79_eth1_pll_data.pll_1000 = 0x03000101;
+	ath79_eth1_pll_data.pll_100 = 0x80000101;
+	ath79_eth1_pll_data.pll_10 = 0x80001313;
+	ath79_eth1_data.speed = SPEED_1000;
+	ath79_eth1_data.duplex = DUPLEX_FULL;
+	ath79_register_eth(1);
+
+	/*Radios*/
+	rbspi_wifi_registrer(flags, 0, 1);
+
+	/*GPIO*/
+	ath79_register_gpio_keys_polled(-1, RBSPI_KEYS_POLL_INTERVAL,
+		ARRAY_SIZE(rbspi_gpio_keys_reset1),
+		rbspi_gpio_keys_reset1);
+
+	/*
+	 * Enable GPIO group by mux setup.
+	 * */
+	ath79_gpio_function_enable(QCA955X_GPIO_FUNC_JTAG_DISABLE|
+				QCA955X_GPIO_REG_OUT_FUNC4|
+				QCA955X_GPIO_REG_OUT_FUNC3);
+
+	//rbspi_spi_cs_gpios[1] = 11;
+
+	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbwapg_leds),
+			rbwapg_leds);
+}
+
+MIPS_MACHINE_NONAME(ATH79_MACH_RB_WAPG, "wapg-sc", rbwapg_setup)
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_MAPL, "map-hb", rbmapl_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_941, "H951L", rbhapl_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_952, "952-hb", rb952_setup);
