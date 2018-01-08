@@ -12,6 +12,7 @@
  *  - MikroTik RouterBOARD 750 r2
  *  - MikroTik RouterBOARD LHG 5nD
  *  - MikroTik RouterBOARD wAP2nD
+ *  - MikroTik RouterBOARD wAP G-5HacT2HnDwAP (wAP AC)
  *
  *  Preliminary support for the following hardware
  *  - MikroTik RouterBOARD cAP2nD
@@ -41,6 +42,8 @@
 #include <linux/mtd/partitions.h>
 
 #include <linux/ar8216_platform.h>
+#include <linux/platform_data/phy-at803x.h>
+#include <linux/platform_data/mdio-gpio.h>
 
 #include <asm/prom.h>
 #include <asm/mach-ath79/ar71xx_regs.h>
@@ -134,7 +137,8 @@ static struct flash_platform_data rbspi_spi_flash_data = {
 	.nr_parts = ARRAY_SIZE(rbspi_spi_partitions),
 };
 
-/* Several boards only have a single reset button wired to GPIO 16 */
+/* Reset buttons: */
+#define RBSPI_GPIO_BTN_RESET01	01
 #define RBSPI_GPIO_BTN_RESET16	16
 #define RBSPI_GPIO_BTN_RESET20	20
 
@@ -156,6 +160,17 @@ static struct gpio_keys_button rbspi_gpio_keys_reset20[] __initdata = {
 		.code = KEY_RESTART,
 		.debounce_interval = RBSPI_KEYS_DEBOUNCE_INTERVAL,
 		.gpio = RBSPI_GPIO_BTN_RESET20,
+		.active_low = 1,
+	},
+};
+
+static struct gpio_keys_button rbspi_gpio_keys_reset1[] __initdata = {
+	{
+		.desc = "Reset button",
+		.type = EV_KEY,
+		.code = KEY_RESTART,
+		.debounce_interval = RBSPI_KEYS_DEBOUNCE_INTERVAL,
+		.gpio = RBSPI_GPIO_BTN_RESET01,
 		.active_low = 1,
 	},
 };
@@ -485,6 +500,38 @@ static struct gpio_keys_button rblhg_gpio_keys[] __initdata = {
 	},
 };
 
+/* RB WAPG GPIO */
+#define RBWAPG_LED1		1
+#define RBWAPG_LED2		8
+#define RBWAPG_LED3		9
+#define RBWAPG_POWERLED		16
+
+#define RBWAPG_GPIO_MDIO_MDC		12
+#define RBWAPG_GPIO_MDIO_DATA		11
+
+#define RBWAPG_MDIO_PHYMASK		0
+
+static struct gpio_led rbwapg_leds[] __initdata = {
+	{
+		.name = "rb:green:power_led",
+		.gpio = RBWAPG_POWERLED,
+		.active_low = 1,
+	},
+};
+
+static struct mdio_gpio_platform_data rbwapg_mdio_data = {
+	.mdc		= RBWAPG_GPIO_MDIO_MDC,
+	.mdio		= RBWAPG_GPIO_MDIO_DATA,
+	.phy_mask	= ~BIT(RBWAPG_MDIO_PHYMASK),
+};
+
+static struct platform_device rbwapg_phy_device = {
+	.name	= "mdio-gpio",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &rbwapg_mdio_data
+	},
+};
 
 static struct gen_74x164_chip_platform_data rbspi_ssr_data = {
 	.base = RBSPI_SSR_GPIO_BASE,
@@ -988,7 +1035,58 @@ static void __init rbmap_setup(void)
 					rbspi_gpio_keys_reset16);
 }
 
+/*
+ * RBwAPG-5HacT2HnD board:
+ *  -Power	: PoE AT - DC.in (12 - 57V)
+ *  -SoC	: QCA9556
+ *  -Net:	: AR8033
+ *  -Phy0	: Built-in SoC, mimo 2x2:2
+ *  -Phy1	: QCA9880 3x3
+ *  -RAM	: 64 MiB
+ *  -FLASH	: 16 MiB
+ *  -Antennas	: Gain 2dbi ( both bands )
+ *  -IC		: ZT2046Q provide a temperature and voltage sensor.
+ *
+ *  Magic: wapg-sc
+ */
+static void __init rbwapg_setup(void)
+{
+	u32 flags = RBSPI_HAS_WLAN1 | RBSPI_HAS_PCI;
 
+	if (rbspi_platform_setup())
+		return;
+
+	/* Sets SPI and USB */
+	rbspi_peripherals_setup(flags);
+
+	/* SoC setup: MDIO Interface  */
+	platform_device_register(&rbwapg_phy_device);
+
+	/* GMAC1 is connect by SGMII to AR8083  */
+	ath79_init_mac(ath79_eth1_data.mac_addr, ath79_mac_base, 0);
+	ath79_eth1_data.mii_bus_dev = &rbwapg_phy_device.dev;
+	ath79_eth1_data.phy_if_mode = PHY_INTERFACE_MODE_SGMII;
+	ath79_eth1_data.phy_mask = BIT(RBWAPG_MDIO_PHYMASK);
+	ath79_eth1_pll_data.pll_1000 = 0x03000101;
+	ath79_eth1_pll_data.pll_100 = 0x80000101;
+	ath79_eth1_pll_data.pll_10 = 0x80001313;
+	ath79_eth1_data.speed = SPEED_1000;
+	ath79_eth1_data.duplex = DUPLEX_FULL;
+	ath79_register_eth(1);
+
+	/*Radios*/
+	rbspi_radio_registrer(flags, 0, 1);
+
+	/*Leds*/
+	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbwapg_leds), rbwapg_leds);
+
+	/*GPIO*/
+	ath79_register_gpio_keys_polled(-1, RBSPI_KEYS_POLL_INTERVAL,
+		ARRAY_SIZE(rbspi_gpio_keys_reset1),
+		rbspi_gpio_keys_reset1);
+}
+
+MIPS_MACHINE_NONAME(ATH79_MACH_RB_WAPAC, "wapg-sc", rbwapg_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_MAPL, "map-hb", rbmapl_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_941, "H951L", rbhapl_setup);
 MIPS_MACHINE_NONAME(ATH79_MACH_RB_952, "952-hb", rb952_setup);
