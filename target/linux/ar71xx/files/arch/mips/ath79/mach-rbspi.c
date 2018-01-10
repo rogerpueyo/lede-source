@@ -599,8 +599,7 @@ static void __init rbspi_peripherals_setup(u32 flags)
  * Common network init routine for all SPI NOR devices.
  * Sets LAN/WAN/WLAN.
  */
-static void __init rbspi_network_setup(u32 flags, int gmac1_offset,
-					int wmac0_offset, int wmac1_offset)
+static void __init rbspi_network_setup(u32 flags, int gmac1_offset)
 {
 	/* for QCA953x that will init mdio1_device/data */
 	ath79_register_mdio(0, 0x0);
@@ -634,11 +633,22 @@ static void __init rbspi_network_setup(u32 flags, int gmac1_offset,
 	ath79_eth1_data.phy_if_mode = PHY_INTERFACE_MODE_GMII;
 	ath79_register_eth(1);
 
+}
+
+/*
+ * Common WiFi init routine for all SPI NOR devices.
+ * Sets WiFi
+ */
+static void __init rbspi_radio_registrer(u32 flags,
+				int wmac0_offset, int wmac1_offset)
+{
+
 	if (flags & RBSPI_HAS_WLAN0)
 		rbspi_wlan_init(0, wmac0_offset);
 
 	if (flags & RBSPI_HAS_WLAN1)
 		rbspi_wlan_init(1, wmac1_offset);
+
 }
 
 /* 
@@ -658,7 +668,10 @@ static void __init rbmapl_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 1, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_radio_registrer(flags, 1, 0);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbmapl_leds), rbmapl_leds);
 
@@ -689,7 +702,10 @@ static void __init rbhapl_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 4 */
-	rbspi_network_setup(flags, 0, 4, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_radio_registrer(flags, 4, 0);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbhapl_leds), rbhapl_leds);
 
@@ -713,7 +729,10 @@ static void __init rbspi_952_750r2_setup(u32 flags)
 	 * GMAC1 is HW MAC + 1, WLAN0 MAC IS HW MAC + 5 (hAP),
 	 * WLAN1 MAC IS HW MAC + 6 (hAP ac lite)
 	 */
-	rbspi_network_setup(flags, 1, 5, 6);
+	rbspi_network_setup(flags, 1);
+
+	/*Radios*/
+	rbspi_radio_registrer(flags, 5, 6);
 
 	if (flags & RBSPI_HAS_USB)
 		gpio_request_one(RB952_GPIO_USB_POWER,
@@ -825,7 +844,8 @@ static void __init rb962_setup(void)
 	ath79_register_eth(0);
 
 	/* WLAN1 MAC is HW MAC + 7 */
-	rbspi_wlan_init(1, 7);
+	rbspi_radio_registrer(flags, 1, 7);
+
 
 	if (flags & RBSPI_HAS_USB)
 		gpio_request_one(RB962_GPIO_USB_POWER,
@@ -863,7 +883,10 @@ static void __init rblhg_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN1 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 0, 1);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_radio_registrer(flags, 0, 1);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rblhg_leds), rblhg_leds);
 
@@ -886,7 +909,8 @@ static void __init rbwap_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 1, 0);
+	rbspi_network_setup(flags, 0);
+	rbspi_radio_registrer(flags, 1, 0);
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(rbwap_leds), rbwap_leds);
 
@@ -910,7 +934,10 @@ static void __init rbcap_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 1 */
-	rbspi_network_setup(flags, 0, 1, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_radio_registrer(flags, 1, 0);
 
 	gpio_request_one(RBCAP_GPIO_LED_ALL,
 			 GPIOF_OUT_INIT_HIGH | GPIOF_EXPORT_DIR_FIXED,
@@ -936,7 +963,10 @@ static void __init rbmap_setup(void)
 	rbspi_peripherals_setup(flags);
 
 	/* GMAC1 is HW MAC, WLAN0 MAC is HW MAC + 2 */
-	rbspi_network_setup(flags, 0, 2, 0);
+	rbspi_network_setup(flags, 0);
+
+	/*Radios*/
+	rbspi_radio_registrer(flags, 2, 0);
 
 	if (flags & RBSPI_HAS_POE)
 		gpio_request_one(RBMAP_GPIO_POE_POWER,
